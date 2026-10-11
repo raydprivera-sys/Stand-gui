@@ -1,0 +1,365 @@
+--[ Fixed TSB Stand Controller Script (Stado v3.2 - Garou Edition) ]--
+
+if getgenv().TSBStandLoaded then
+    if getgenv().TSBStandCleanup then
+        getgenv().TSBStandCleanup()
+    end
+end
+
+getgenv().TSBStandLoaded = true
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local LocalPlayer = Players.LocalPlayer
+
+-- CONFIGURATION
+local PERMITTED_USER = "lorenzoisthebest1231"
+local PREFIX = "."
+
+-- STATE MANAGEMENT
+local isSummoned = true
+local isAttacking = false
+local connections = {}
+
+-- CUSTOM LOCATIONS
+local LOCATIONS = {
+    mountain = Vector3.new(150, 250, 300),
+    spawn = Vector3.new(0, 10, 0),
+}
+
+-- SAFE SPAWN INITIALIZATION
+task.spawn(function()
+    task.wait(0.5)
+    local mainPlayer = Players:FindFirstChild(PERMITTED_USER)
+    if mainPlayer and mainPlayer.Character and mainPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if myHRP then
+            myHRP.CFrame = mainPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(-3.5, 2.5, 1.0)
+        end
+    end
+end)
+
+-- CREATE STADO INTRO & UI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "StadoUI"
+ScreenGui.ResetOnSpawn = false
+
+if syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = CoreGui
+elseif gethui then
+    ScreenGui.Parent = gethui()
+else
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+-- Fullscreen Intro Frame
+local IntroFrame = Instance.new("Frame")
+IntroFrame.Name = "IntroFrame"
+IntroFrame.Size = UDim2.new(1, 0, 1, 0)
+IntroFrame.Position = UDim2.new(0, 0, 0, 0)
+IntroFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+IntroFrame.BorderSizePixel = 0
+IntroFrame.ZIndex = 10
+IntroFrame.Parent = ScreenGui
+
+local IntroText = Instance.new("TextLabel")
+IntroText.Name = "IntroText"
+IntroText.Size = UDim2.new(1, 0, 1, 0)
+IntroText.BackgroundTransparency = 1
+IntroText.Text = "STADO"
+IntroText.TextColor3 = Color3.fromRGB(255, 255, 255)
+IntroText.TextSize = 48
+IntroText.Font = Enum.Font.GothamBold
+IntroText.ZIndex = 11
+IntroText.Parent = IntroFrame
+
+-- Stand Control Menu Frame
+local MainMenu = Instance.new("Frame")
+MainMenu.Name = "MainMenu"
+MainMenu.Size = UDim2.new(0, 180, 0, 210)
+MainMenu.Position = UDim2.new(1, -190, 1, -260)
+MainMenu.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainMenu.BorderSizePixel = 0
+MainMenu.Visible = false
+MainMenu.Parent = ScreenGui
+
+local MenuCorner = Instance.new("UICorner")
+MenuCorner.CornerRadius = UDim.new(0, 8)
+MenuCorner.Parent = MainMenu
+
+local MenuTitle = Instance.new("TextLabel")
+MenuTitle.Size = UDim2.new(1, 0, 0, 30)
+MenuTitle.BackgroundTransparency = 1
+MenuTitle.Text = "STADO CONTROLLER"
+MenuTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+MenuTitle.TextSize = 13
+MenuTitle.Font = Enum.Font.GothamBold
+MenuTitle.Parent = MainMenu
+
+-- Minimizable Corner Badge
+local StadoBadge = Instance.new("TextButton")
+StadoBadge.Name = "StadoBadge"
+StadoBadge.Size = UDim2.new(0, 100, 0, 35)
+StadoBadge.Position = UDim2.new(0.5, -50, 0.5, -17)
+StadoBadge.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+StadoBadge.BorderSizePixel = 0
+StadoBadge.Text = "STADO"
+StadoBadge.TextColor3 = Color3.fromRGB(255, 255, 255)
+StadoBadge.TextSize = 16
+StadoBadge.Font = Enum.Font.GothamBold
+StadoBadge.ZIndex = 12
+StadoBadge.Parent = ScreenGui
+
+local BadgeCorner = Instance.new("UICorner")
+BadgeCorner.CornerRadius = UDim.new(0, 6)
+BadgeCorner.Parent = StadoBadge
+
+local function createButton(name, pos, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.88, 0, 0, 28)
+    btn.Position = pos
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    btn.BorderSizePixel = 0
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 12
+    btn.Parent = MainMenu
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 4)
+    corner.Parent = btn
+
+    btn.MouseButton1Click:Connect(callback)
+end
+
+-- Play Intro Sequence
+task.spawn(function()
+    task.wait(1.2)
+    TweenService:Create(IntroFrame, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+    
+    TweenService:Create(StadoBadge, TweenInfo.new(0.8, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        Position = UDim2.new(1, -110, 1, -45),
+        Size = UDim2.new(0, 100, 0, 35),
+        TextSize = 14
+    }):Play()
+
+    task.wait(0.5)
+    IntroFrame:Destroy()
+end)
+
+StadoBadge.MouseButton1Click:Connect(function()
+    MainMenu.Visible = not MainMenu.Visible
+end)
+
+-- CLEANUP HANDLER
+local function cleanup()
+    for _, conn in ipairs(connections) do
+        if conn and typeof(conn) == "RBXScriptConnection" then
+            conn:Disconnect()
+        end
+    end
+    connections = {}
+    if ScreenGui then ScreenGui:Destroy() end
+    getgenv().TSBStandLoaded = nil
+    print("[Stand]: Unloaded and cleaned up.")
+end
+getgenv().TSBStandCleanup = cleanup
+
+-- UTILITIES
+local function findPlayer(query)
+    if not query or query == "" then return nil end
+    query = string.lower(query)
+    for _, player in ipairs(Players:GetPlayers()) do
+        if string.find(string.lower(player.Name), query) or string.find(string.lower(player.DisplayName), query) then
+            return player
+        end
+    end
+    return nil
+end
+
+local function clickM1()
+    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+    task.wait(0.05)
+    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+end
+
+local function pressKey(keyCode, holdTime)
+    VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
+    task.wait(holdTime or 0.05)
+    VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
+end
+
+-- FIXED GAROU AUTO-KILL COMBO (Matches your Garou Moveset)
+local function executeGarouCombo(target)
+    if isAttacking or not target then return end
+    isAttacking = true
+
+    local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    local targetHRP = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+
+    if not myHRP or not targetHRP then 
+        isAttacking = false 
+        return 
+    end
+
+    local function faceTarget()
+        if myHRP and targetHRP then
+            myHRP.CFrame = CFrame.new(targetHRP.Position + (targetHRP.CFrame.LookVector * -2.5), targetHRP.Position)
+        end
+    end
+
+    faceTarget()
+    task.wait(0.1)
+
+    -- Step 1: 3x M1 Attacks
+    for i = 1, 3 do
+        faceTarget()
+        clickM1()
+        task.wait(0.25)
+    end
+
+    -- Step 2: Hunter's Grasp (Move 3) - Grabs and sets up combo
+    faceTarget()
+    pressKey(Enum.KeyCode.Three, 0.1)
+    task.wait(0.8)
+
+    -- Step 3: Lethal Whirlwind Stream (Move 2)
+    faceTarget()
+    pressKey(Enum.KeyCode.Two, 0.1)
+    task.wait(1.2)
+
+    -- Step 4: 2x M1 Attacks
+    for i = 1, 2 do
+        faceTarget()
+        clickM1()
+        task.wait(0.25)
+    end
+
+    -- Step 5: Flowing Water (Move 1) or Prey's Peril (Move 4) Finisher
+    faceTarget()
+    pressKey(Enum.KeyCode.Four, 0.1)
+
+    task.wait(0.5)
+    isAttacking = false
+end
+
+-- COMMAND HANDLER
+local function processCommand(sender, message)
+    if sender.Name ~= PERMITTED_USER then return end
+    if string.sub(message, 1, #PREFIX) ~= PREFIX then return end
+
+    local args = string.split(string.sub(message, #PREFIX + 1), " ")
+    local cmd = string.lower(args[1] or "")
+
+    if cmd == "summon" then
+        isSummoned = true
+
+    elseif cmd == "void" then
+        isSummoned = false
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(0, -500, 0)
+        end
+
+    elseif cmd == "ak" then
+        local target = findPlayer(args[2])
+        if target then
+            task.spawn(function()
+                executeGarouCombo(target)
+            end)
+        end
+
+    elseif cmd == "tp" then
+        local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not myHRP then return end
+
+        local destName = string.lower(args[2] or "")
+        local pos = LOCATIONS[destName]
+        local targetPlayer = findPlayer(args[2])
+
+        if pos then
+            myHRP.CFrame = CFrame.new(pos)
+        elseif targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            myHRP.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+        end
+    end
+end
+
+-- POPULATE UI BUTTONS
+createButton("Summon Stand", UDim2.new(0.06, 0, 0, 35), function()
+    isSummoned = true
+end)
+
+createButton("Void Stand", UDim2.new(0.06, 0, 0, 68), function()
+    isSummoned = false
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(0, -500, 0)
+    end
+end)
+
+createButton("TP To Main Account", UDim2.new(0.06, 0, 0, 101), function()
+    local mainPlayer = Players:FindFirstChild(PERMITTED_USER)
+    if mainPlayer and mainPlayer.Character and mainPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if myHRP then
+            myHRP.CFrame = mainPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+        end
+    end
+end)
+
+createButton("TP To Spawn", UDim2.new(0.06, 0, 0, 134), function()
+    local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if myHRP then
+        myHRP.CFrame = CFrame.new(LOCATIONS.spawn)
+    end
+end)
+
+createButton("Unload Script", UDim2.new(0.06, 0, 0, 167), function()
+    cleanup()
+end)
+
+-- CLEAN SIDE HOVER POSITIONING (Prevents overlapping / stacking)
+local hoverTimer = 0
+local followConn = RunService.RenderStepped:Connect(function(dt)
+    if not isSummoned or isAttacking then return end
+    
+    local mainPlayer = Players:FindFirstChild(PERMITTED_USER)
+    if mainPlayer and mainPlayer.Character and mainPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local mainHRP = mainPlayer.Character.HumanoidRootPart
+        local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        
+        if myHRP then
+            hoverTimer = hoverTimer + (dt * 2.5)
+            
+            local verticalHover = math.sin(hoverTimer) * 0.35
+            -- Positioned cleanly to your left side with proper shoulder/neck height clearance
+            local targetCFrame = mainHRP.CFrame * CFrame.new(-3.2, 0, 1.5) * CFrame.Angles(0, math.rad(15), 0)
+            
+            myHRP.CFrame = myHRP.CFrame:Lerp(targetCFrame, 0.25)
+        end
+    end
+end)
+table.insert(connections, followConn)
+
+-- CHAT LISTENERS
+local function setupChatListener(player)
+    if player.Name == PERMITTED_USER then
+        local chatConn = player.Chatted:Connect(function(msg)
+            processCommand(player, msg)
+        end)
+        table.insert(connections, chatConn)
+    end
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+    setupChatListener(player)
+end
+
+local playerAddedConn = Players.PlayerAdded:Connect(setupChatListener)
+table.insert(connections, playerAddedConn)
+
+print("[STADO]: v3.2 Garou Edition Loaded Successfully!")
