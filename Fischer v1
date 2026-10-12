@@ -1,0 +1,173 @@
+-- ========================================================
+-- Delta Mobile Hub: Fisch Automated Universal Script
+-- Fully Mobile-Optimized with Drag Support & Touch Emulation
+-- ========================================================
+
+-- Services
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- Prevent duplications
+if CoreGui:FindFirstChild("DeltaFischHub") then
+    CoreGui.DeltaFischHub:Destroy()
+end
+
+-- Global State Management
+_G.Fisch_AutoCast = false
+_G.Fisch_AutoShake = false
+_G.Fisch_InstaReel = false
+
+-- Interface Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "DeltaFischHub"
+ScreenGui.Parent = CoreGui
+ScreenGui.ResetOnSpawn = false
+
+-- Main Drag Frame
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 280, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -140, 0.4, -160)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 14)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Thickness = 2
+MainStroke.Color = Color3.fromRGB(0, 200, 255)
+MainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+MainStroke.Parent = MainFrame
+
+-- Header Title
+local Header = Instance.new("TextLabel")
+Header.Name = "Header"
+Header.Size = UDim2.new(1, 0, 0, 45)
+Header.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+Header.Text = "⚡ DELTA FISCH V1000X"
+Header.TextColor3 = Color3.fromRGB(0, 220, 255)
+Header.TextSize = 15
+Header.Font = Enum.Font.GothamBold
+Header.Parent = MainFrame
+
+local HeaderCorner = Instance.new("UICorner")
+HeaderCorner.CornerRadius = UDim.new(0, 14)
+HeaderCorner.Parent = Header
+
+-- Scroll Container
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(0.9, 0, 0.8, 0)
+Scroll.Position = UDim2.new(0.05, 0, 0.17, 0)
+Scroll.BackgroundTransparency = 1
+Scroll.ScrollBarThickness = 3
+Scroll.ScrollBarImageColor3 = Color3.fromRGB(0, 200, 255)
+Scroll.Parent = MainFrame
+
+local Layout = Instance.new("UIListLayout")
+Layout.SortOrder = Enum.SortOrder.LayoutOrder
+Layout.Padding = UDim.new(0, 10)
+Layout.Parent = Scroll
+
+-- Button UI Creator Helper
+local function CreateButton(text, globalKey, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, 0, 0, 42)
+    Btn.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    Btn.Text = text .. ": [ OFF ]"
+    Btn.TextColor3 = Color3.fromRGB(180, 180, 190)
+    Btn.Font = Enum.Font.GothamSemibold
+    Btn.TextSize = 13
+    Btn.Parent = Scroll
+
+    local BtnCorner = Instance.new("UICorner")
+    BtnCorner.CornerRadius = UDim.new(0, 8)
+    BtnCorner.Parent = Btn
+
+    local BtnStroke = Instance.new("UIStroke")
+    BtnStroke.Thickness = 1
+    BtnStroke.Color = Color3.fromRGB(45, 45, 60)
+    BtnStroke.Parent = Btn
+
+    Btn.MouseButton1Click:Connect(function()
+        _G[globalKey] = not _G[globalKey]
+        if _G[globalKey] then
+            Btn.BackgroundColor3 = Color3.fromRGB(0, 160, 100)
+            Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            Btn.Text = text .. ": [ ON ]"
+            BtnStroke.Color = Color3.fromRGB(0, 255, 150)
+        else
+            Btn.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+            Btn.TextColor3 = Color3.fromRGB(180, 180, 190)
+            Btn.Text = text .. ": [ OFF ]"
+            BtnStroke.Color = Color3.fromRGB(45, 45, 60)
+        end
+        task.spawn(function()
+            callback(_G[globalKey])
+        end)
+    end)
+end
+
+-- ========================================================
+-- FEATURE IMPLEMENTATION LOGIC
+-- ========================================================
+
+-- 1. Auto Perfect Cast
+CreateButton("Auto Perfect Cast", "Fisch_AutoCast", function(active)
+    while _G.Fisch_AutoCast do
+        task.wait(0.5)
+        local char = LocalPlayer.Character
+        if char then
+            local tool = char:FindFirstChildOfClass("Tool")
+            if tool and tool:FindFirstChild("events") and tool.events:FindFirstChild("cast") then
+                -- Fires 100% cast force
+                tool.events.cast:FireServer(100)
+            end
+        end
+    end
+end)
+
+-- 2. Auto Shake (Simulates exact touch/click positions on Mobile UI)
+CreateButton("Auto Shake", "Fisch_AutoShake", function(active)
+    while _G.Fisch_AutoShake do
+        task.wait(0.05)
+        local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if playerGui then
+            local shakeGui = playerGui:FindFirstChild("shakeui")
+            if shakeGui and shakeGui:FindFirstChild("safezone") then
+                local button = shakeGui.safezone:FindFirstChild("button")
+                if button and button.Visible then
+                    local posX = button.AbsolutePosition.X + (button.AbsoluteSize.X / 2)
+                    local posY = button.AbsolutePosition.Y + (button.AbsoluteSize.Y / 2)
+                    
+                    VirtualInputManager:SendMouseButtonEvent(posX, posY, 0, true, game, 1)
+                    VirtualInputManager:SendMouseButtonEvent(posX, posY, 0, false, game, 1)
+                end
+            end
+        end
+    end
+end)
+
+-- 3. Insta-Catch / Auto Reel
+CreateButton("Insta-Catch / Auto Reel", "Fisch_InstaReel", function(active)
+    while _G.Fisch_InstaReel do
+        task.wait(0.2)
+        local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if playerGui and playerGui:FindFirstChild("reel") then
+            local events = ReplicatedStorage:FindFirstChild("events")
+            if events and events:FindFirstChild("reelfinished") then
+                -- Fires instant successful reel end event
+                events.reelfinished:FireServer(100, true)
+            end
+        end
+    end
+end)
