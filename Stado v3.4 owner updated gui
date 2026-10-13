@@ -1,0 +1,247 @@
+--[ STADO Owner Controller GUI - v3.3 Cyberpunk Neon ]--
+-- Configured for Owner: lorenzoisthebest1231
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- SECURITY LOCK
+local PERMITTED_OWNER = "lorenzoisthebest1231"
+
+if LocalPlayer.Name ~= PERMITTED_OWNER then
+    warn("[STADO PERMISSION DENIED]: This controller GUI can only be executed by " .. PERMITTED_OWNER)
+    return
+end
+
+local TextChatService = game:GetService("TextChatService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+-- CLEANUP PREVIOUS INSTANCES
+if getgenv().StadoGUILoaded then
+    if getgenv().StadoGUICleanup then getgenv().StadoGUICleanup() end
+end
+getgenv().StadoGUILoaded = true
+
+-- GUI CONTAINER
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "StadoOwnerController_v33"
+ScreenGui.ResetOnSpawn = false
+
+if gethui then
+    ScreenGui.Parent = gethui()
+elseif syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = CoreGui
+elseif CoreGui:FindFirstChild("RobloxGui") then
+    ScreenGui.Parent = CoreGui
+else
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+getgenv().StadoGUICleanup = function()
+    ScreenGui:Destroy()
+    getgenv().StadoGUILoaded = nil
+end
+
+-- MAIN CONTAINER FRAME
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 220, 0, 290)
+MainFrame.Position = UDim2.new(0.03, 0, 0.3, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
+
+-- ANIMATED NEON BORDER
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Thickness = 2
+UIStroke.Color = Color3.fromRGB(140, 60, 255)
+UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+UIStroke.Parent = MainFrame
+
+local UIGradient = Instance.new("UIGradient")
+UIGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 30, 255)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 210, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 30, 255))
+})
+UIGradient.Rotation = 45
+UIGradient.Parent = UIStroke
+
+-- ROTATING NEON GRADIENT LOOP
+task.spawn(function()
+    while getgenv().StadoGUILoaded do
+        UIGradient.Rotation = (UIGradient.Rotation + 3) % 360
+        task.wait(0.03)
+    end
+end)
+
+-- TITLE BAR
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 36)
+TitleBar.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 10)
+TitleCorner.Parent = TitleBar
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(1, -30, 1, 0)
+TitleText.Position = UDim2.new(0, 12, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "STADO v3.3 // MAIN"
+TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleText.TextSize = 13
+TitleText.Font = Enum.Font.GothamBold
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.Parent = TitleBar
+
+local StatusDot = Instance.new("Frame")
+StatusDot.Size = UDim2.new(0, 8, 0, 8)
+StatusDot.Position = UDim2.new(1, -20, 0.5, -4)
+StatusDot.BackgroundColor3 = Color3.fromRGB(0, 255, 140)
+StatusDot.BorderSizePixel = 0
+StatusDot.Parent = TitleBar
+
+local DotCorner = Instance.new("UICorner")
+DotCorner.CornerRadius = UDim.new(1, 0)
+DotCorner.Parent = StatusDot
+
+-- SMOOTH TOUCH / MOUSE DRAGGING MECHANIC
+local dragging, dragInput, dragStart, startPos
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+TitleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        TweenService:Create(MainFrame, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        }):Play()
+    end
+end)
+
+-- CHAT SENDER
+local function sendChatCommand(messageText)
+    task.spawn(function()
+        if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+            local generalChannel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+            if generalChannel then
+                generalChannel:SendAsync(messageText)
+            end
+        else
+            local defaultChatEvents = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
+            if defaultChatEvents then
+                local sayMessage = defaultChatEvents:FindFirstChild("SayMessageRequest")
+                if sayMessage then
+                    sayMessage:FireServer(messageText, "All")
+                end
+            end
+        end
+    end)
+end
+
+-- NEON BUTTON BUILDER
+local function createNeonButton(text, iconText, posY, colorScheme, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.88, 0, 0, 32)
+    btn.Position = UDim2.new(0.06, 0, 0, posY)
+    btn.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
+    btn.BorderSizePixel = 0
+    btn.Text = ""
+    btn.AutoButtonColor = false
+    btn.Parent = MainFrame
+
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.Parent = btn
+
+    local btnStroke = Instance.new("UIStroke")
+    btnStroke.Thickness = 1
+    btnStroke.Color = colorScheme or Color3.fromRGB(60, 60, 80)
+    btnStroke.Transparency = 0.4
+    btnStroke.Parent = btn
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -20, 1, 0)
+    label.Position = UDim2.new(0, 10, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = iconText .. "  " .. text
+    label.TextColor3 = Color3.fromRGB(220, 220, 235)
+    label.Font = Enum.Font.GothamMedium
+    label.TextSize = 12
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = btn
+
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(36, 36, 48)}):Play()
+        TweenService:Create(btnStroke, TweenInfo.new(0.2), {Transparency = 0}):Play()
+        TweenService:Create(label, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+    end)
+
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(24, 24, 32)}):Play()
+        TweenService:Create(btnStroke, TweenInfo.new(0.2), {Transparency = 0.4}):Play()
+        TweenService:Create(label, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(220, 220, 235)}):Play()
+    end)
+
+    btn.MouseButton1Click:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.08), {Size = UDim2.new(0.84, 0, 0, 30)}):Play()
+        task.wait(0.08)
+        TweenService:Create(btn, TweenInfo.new(0.1), {Size = UDim2.new(0.88, 0, 0, 32)}):Play()
+        callback()
+    end)
+end
+
+-- POPULATE NEON BUTTONS
+createNeonButton("Summon Stand", "⚡", 48, Color3.fromRGB(0, 220, 255), function()
+    sendChatCommand(".summon")
+end)
+
+createNeonButton("Void Stand", "🌀", 86, Color3.fromRGB(180, 50, 255), function()
+    sendChatCommand(".void")
+end)
+
+createNeonButton("TP To Spawn", "📍", 124, Color3.fromRGB(255, 180, 0), function()
+    sendChatCommand(".tp spawn")
+end)
+
+createNeonButton("TP To Mountain", "🏔️", 162, Color3.fromRGB(0, 255, 150), function()
+    sendChatCommand(".tp mountain")
+end)
+
+createNeonButton("Execute Garou AK", "⚔️", 200, Color3.fromRGB(255, 60, 90), function()
+    sendChatCommand(".ak")
+end)
+
+createNeonButton("Close Interface", "❌", 238, Color3.fromRGB(255, 50, 50), function()
+    getgenv().StadoGUICleanup()
+end)
+
+print("[STADO v3.3]: Cyberpunk Neon UI Loaded!")
